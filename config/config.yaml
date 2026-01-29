@@ -1,0 +1,105 @@
+# Stock Advisor Configuration
+
+# Application settings
+app:
+  name: "Stock Advisor"
+  version: "0.1.0"
+  debug: false
+
+# Database settings
+database:
+  url: "sqlite:///data/stock_advisor.db"
+  echo: false
+
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "http://localhost:8501"
+    - "http://127.0.0.1:8501"
+
+# Streamlit UI settings
+ui:
+  port: 8501
+  theme: "dark"
+
+# Scraping settings
+scraping:
+  # Rate limiting (requests per second)
+  rate_limit: 1
+
+  # User agent for requests
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+  # Request timeout in seconds
+  timeout: 30
+
+  # Cache TTL in seconds
+  cache_ttl: 300
+
+# LLM settings (Ollama)
+llm:
+  enabled: false
+  base_url: "http://localhost:11434"
+  model: "llama3.1:8b-instruct-q4_K_M"
+  timeout: 60
+
+# Scoring weights (must sum to 1.0)
+scoring:
+  technical_weight: 0.25
+  fundamental_weight: 0.25
+  sentiment_weight: 0.25
+  smart_money_weight: 0.25
+
+# Default filters
+filters:
+  ethical:
+    exclude_tobacco: true
+    exclude_weapons: true
+    exclude_gambling: true
+    exclude_fossil_fuels: false
+
+  fundamental:
+    max_pe: 50
+    max_peg: 3.0
+    max_debt_to_equity: 2.0
+    min_market_cap: 1000  # millions
+
+  geographic:
+    pea_only: false
+
+# Index constituents to track
+indices:
+  - CAC40
+  - SBF120
+  - SP500
+  - NASDAQ100
+
+# Guru investors to track (13F filings)
+gurus:
+  - name: "Warren Buffett"
+    fund: "Berkshire Hathaway"
+  - name: "Ray Dalio"
+    fund: "Bridgewater Associates"
+  - name: "Michael Burry"
+    fund: "Scion Asset Management"
+  - name: "Bill Ackman"
+    fund: "Pershing Square"
+
+# Scheduler settings
+scheduler:
+  # Update stock data every 15 minutes during market hours
+  stock_update_interval: 15
+
+  # Update fundamentals daily
+  fundamentals_update_interval: 1440
+
+  # Update sentiment every hour
+  sentiment_update_interval: 60
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/stock_advisor.log"

@@ -1,0 +1,87 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Rust
+rust/target/
+**/*.rs.bk
+Cargo.lock
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache
+.cache/
+*.cache
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (keep structure, ignore content)
+data/*.json
+data/*.csv
+!data/.gitkeep
+
+# Config secrets
+config/secrets.yaml
+config/*.secret.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# mypy
+.mypy_cache/
+
+# pytest
+.pytest_cache/

@@ -1,0 +1,63 @@
+[package]
+name = "stock-advisor-rust"
+version = "0.1.0"
+edition = "2021"
+authors = ["Stock Advisor Team"]
+description = "High-performance scraping and parsing components for Stock Advisor"
+
+[lib]
+name = "stock_advisor"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "finviz-scraper"
+path = "src/bin/finviz_scraper.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "cookies", "gzip"] }
+
+# HTML parsing
+scraper = "0.18"
+
+# JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Rate limiting
+governor = "0.6"
+
+# Utilities
+futures = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+url = "2.5"
+regex = "1.10"
+
+# Optional: PyO3 for Python bindings
+# pyo3 = { version = "0.20", features = ["extension-module"], optional = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = []
+# python = ["pyo3"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
