@@ -1,0 +1,93 @@
+{
+  "portfolio": {
+    "name": "Mon PEA Boursorama",
+    "type": "PEA",
+    "broker": "Boursorama",
+    "currency": "EUR",
+    "opened_date": "2026-02-02T12:00:01.401696"
+  },
+  "positions": [
+    {
+      "ticker": "AI.PA",
+      "name": "L'Air Liquide S.A.",
+      "quantity": 8.0,
+      "average_cost": 165.0,
+      "sector": "Basic Materials",
+      "country": "France"
+    },
+    {
+      "ticker": "MC.PA",
+      "name": "LVMH Moët Hennessy - Louis Vuitton, Société Européenne",
+      "quantity": 5.0,
+      "average_cost": 750.0,
+      "sector": "Consumer Cyclical",
+      "country": "France"
+    },
+    {
+      "ticker": "OR.PA",
+      "name": "L'Oréal S.A.",
+      "quantity": 10.0,
+      "average_cost": 380.0,
+      "sector": "Consumer Defensive",
+      "country": "France"
+    },
+    {
+      "ticker": "SAN.PA",
+      "name": "Sanofi",
+      "quantity": 50.0,
+      "average_cost": 95.0,
+      "sector": "Healthcare",
+      "country": "France"
+    },
+    {
+      "ticker": "TTE.PA",
+      "name": "TotalEnergies SE",
+      "quantity": 30.0,
+      "average_cost": 58.0,
+      "sector": "Energy",
+      "country": "France"
+    }
+  ],
+  "transactions": [
+    {
+      "type": "buy",
+      "ticker": "MC.PA",
+      "quantity": 5.0,
+      "price": 750.0,
+      "fees": 5.0,
+      "date": "2026-02-02T12:00:01.421171"
+    },
+    {
+      "type": "buy",
+      "ticker": "OR.PA",
+      "quantity": 10.0,
+      "price": 380.0,
+      "fees": 5.0,
+      "date": "2026-02-02T12:00:02.132323"
+    },
+    {
+      "type": "buy",
+      "ticker": "SAN.PA",
+      "quantity": 50.0,
+      "price": 95.0,
+      "fees": 5.0,
+      "date": "2026-02-02T12:00:02.715062"
+    },
+    {
+      "type": "buy",
+      "ticker": "AI.PA",
+      "quantity": 8.0,
+      "price": 165.0,
+      "fees": 5.0,
+      "date": "2026-02-02T12:00:03.086350"
+    },
+    {
+      "type": "buy",
+      "ticker": "TTE.PA",
+      "quantity": 30.0,
+      "price": 58.0,
+      "fees": 5.0,
+      "date": "2026-02-02T12:00:03.695731"
+    }
+  ]
+}

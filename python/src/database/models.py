@@ -345,6 +345,193 @@ class SocialMention(Base):
     )
 
 
+class PortfolioType(PyEnum):
+    """Type de portefeuille."""
+    PEA = "pea"
+    CTO = "cto"
+    ASSURANCE_VIE = "assurance_vie"
+    PER = "per"
+    CRYPTO = "crypto"
+    AUTRE = "autre"
+
+
+class TransactionType(PyEnum):
+    """Type de transaction."""
+    BUY = "buy"
+    SELL = "sell"
+    DIVIDEND = "dividend"
+    SPLIT = "split"
+    TRANSFER_IN = "transfer_in"
+    TRANSFER_OUT = "transfer_out"
+
+
+class Portfolio(Base):
+    """Portefeuille d'investissement."""
+    __tablename__ = "portfolios"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    portfolio_type = Column(String(50), nullable=False)  # PEA, CTO, AV, etc.
+    broker = Column(String(100))  # Courtier (Boursorama, Degiro, etc.)
+    description = Column(Text)
+
+    # Devise de référence
+    currency = Column(String(10), default="EUR")
+
+    # Dates
+    opened_date = Column(DateTime)  # Date d'ouverture du compte
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Objectifs
+    target_value = Column(Float)  # Objectif de valorisation
+    monthly_contribution = Column(Float)  # Versement mensuel prévu
+
+    # Est actif ?
+    is_active = Column(Boolean, default=True)
+
+    # Relations
+    positions = relationship("Position", back_populates="portfolio", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="portfolio", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Portfolio(name='{self.name}', type='{self.portfolio_type}')>"
+
+
+class Position(Base):
+    """Position dans un portefeuille."""
+    __tablename__ = "positions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    portfolio_id = Column(Integer, ForeignKey("portfolios.id"), nullable=False)
+
+    # Identification de l'actif
+    ticker = Column(String(20), nullable=False)
+    name = Column(String(255))
+    asset_type = Column(String(50), default="stock")  # stock, etf, bond, crypto, fond
+
+    # Position actuelle
+    quantity = Column(Float, nullable=False, default=0)
+    average_cost = Column(Float)  # Prix de revient unitaire
+    total_cost = Column(Float)  # Coût total d'acquisition
+
+    # Devise de l'actif
+    currency = Column(String(10), default="EUR")
+
+    # Métadonnées
+    sector = Column(String(100))
+    country = Column(String(50))
+
+    # Notes
+    notes = Column(Text)
+
+    # Dates
+    first_buy_date = Column(DateTime)
+    last_transaction_date = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relations
+    portfolio = relationship("Portfolio", back_populates="positions")
+    transactions = relationship("Transaction", back_populates="position", cascade="all, delete-orphan")
+    dividends = relationship("DividendReceived", back_populates="position", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index('idx_position_portfolio_ticker', 'portfolio_id', 'ticker'),
+    )
+
+    def __repr__(self):
+        return f"<Position(ticker='{self.ticker}', qty={self.quantity})>"
+
+
+class Transaction(Base):
+    """Transaction d'achat/vente."""
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    portfolio_id = Column(Integer, ForeignKey("portfolios.id"), nullable=False)
+    position_id = Column(Integer, ForeignKey("positions.id"), nullable=True)
+
+    # Type et détails
+    transaction_type = Column(String(20), nullable=False)  # buy, sell, dividend, split
+    ticker = Column(String(20), nullable=False)
+
+    # Montants
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)  # Prix unitaire
+    total_amount = Column(Float)  # Montant total
+    fees = Column(Float, default=0)  # Frais de courtage
+
+    # Devise
+    currency = Column(String(10), default="EUR")
+    exchange_rate = Column(Float, default=1.0)  # Taux de change si devise étrangère
+
+    # Date de la transaction
+    transaction_date = Column(DateTime, nullable=False)
+    settlement_date = Column(DateTime)  # Date de règlement
+
+    # Notes
+    notes = Column(Text)
+
+    # Métadonnées
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relations
+    portfolio = relationship("Portfolio", back_populates="transactions")
+    position = relationship("Position", back_populates="transactions")
+
+    __table_args__ = (
+        Index('idx_transaction_portfolio', 'portfolio_id'),
+        Index('idx_transaction_date', 'transaction_date'),
+        Index('idx_transaction_ticker', 'ticker'),
+    )
+
+    def __repr__(self):
+        return f"<Transaction({self.transaction_type} {self.quantity}x {self.ticker})>"
+
+
+class DividendReceived(Base):
+    """Dividendes reçus."""
+    __tablename__ = "dividends_received"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    position_id = Column(Integer, ForeignKey("positions.id"), nullable=False)
+
+    # Détails
+    ticker = Column(String(20), nullable=False)
+    ex_date = Column(DateTime)  # Date ex-dividende
+    payment_date = Column(DateTime, nullable=False)  # Date de paiement
+
+    # Montants
+    amount_per_share = Column(Float)  # Dividende par action
+    shares_held = Column(Float)  # Nombre d'actions détenues
+    gross_amount = Column(Float, nullable=False)  # Montant brut
+    tax_withheld = Column(Float, default=0)  # Retenue à la source
+    net_amount = Column(Float)  # Montant net
+
+    # Devise
+    currency = Column(String(10), default="EUR")
+
+    # Type de dividende
+    dividend_type = Column(String(50))  # regular, special, return_of_capital
+
+    # Réinvestissement automatique ?
+    is_drip = Column(Boolean, default=False)
+
+    # Notes
+    notes = Column(Text)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relations
+    position = relationship("Position", back_populates="dividends")
+
+    __table_args__ = (
+        Index('idx_dividend_position', 'position_id'),
+        Index('idx_dividend_date', 'payment_date'),
+    )
+
+
 class Catalyst(Base):
     """Catalyseurs et événements."""
     __tablename__ = "catalysts"

@@ -17,6 +17,7 @@ class TechnicalSignal:
     signal: str  # "bullish", "bearish", "neutral"
     weight: float
     description: str
+    score: Optional[float] = None  # Score gradue 0-100
 
 
 @dataclass
@@ -249,23 +250,31 @@ class TechnicalAnalyzer:
 
         if current_diff > 0 and previous_diff <= 0:
             signal = "bullish"
-            description = "Golden Cross (MA50 croise MA200 à la hausse)"
+            score = 85
+            description = "Golden Cross (MA50 croise MA200 a la hausse)"
         elif current_diff < 0 and previous_diff >= 0:
             signal = "bearish"
-            description = "Death Cross (MA50 croise MA200 à la baisse)"
+            score = 15
+            description = "Death Cross (MA50 croise MA200 a la baisse)"
         elif current_diff > 0:
             signal = "bullish"
-            description = "MA50 au-dessus de MA200 (tendance haussière)"
+            # Score gradue selon l'ecart MA50/MA200
+            pct_diff = (current_diff / ma200.iloc[-1]) * 100 if ma200.iloc[-1] != 0 else 0
+            score = min(80, 60 + pct_diff * 2)
+            description = "MA50 au-dessus de MA200 (tendance haussiere)"
         else:
             signal = "bearish"
-            description = "MA50 en-dessous de MA200 (tendance baissière)"
+            pct_diff = (current_diff / ma200.iloc[-1]) * 100 if ma200.iloc[-1] != 0 else 0
+            score = max(20, 40 + pct_diff * 2)
+            description = "MA50 en-dessous de MA200 (tendance baissiere)"
 
         return TechnicalSignal(
             name="ma_crossover",
             value=current_diff,
             signal=signal,
             weight=self.weights["ma_crossover"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_price_vs_ma(self, price: float, ma50: float, ma200: float) -> TechnicalSignal:
@@ -273,59 +282,90 @@ class TechnicalAnalyzer:
         above_ma50 = price > ma50
         above_ma200 = price > ma200
 
+        pct_from_ma200 = ((price - ma200) / ma200) * 100 if ma200 != 0 else 0
+
         if above_ma50 and above_ma200:
-            signal = "bullish"
-            description = "Prix au-dessus de MA50 et MA200"
+            # Penaliser si trop etire au-dessus de MA200
+            if pct_from_ma200 > 30:
+                signal = "bearish"
+                score = 30
+                description = f"Prix trop etire au-dessus des MAs (+{pct_from_ma200:.0f}% vs MA200)"
+            elif pct_from_ma200 > 20:
+                signal = "neutral"
+                score = 50
+                description = f"Prix etire au-dessus des MAs (+{pct_from_ma200:.0f}% vs MA200)"
+            else:
+                signal = "bullish"
+                score = 70 + min(10, pct_from_ma200 * 0.5)
+                description = "Prix au-dessus de MA50 et MA200"
         elif above_ma200:
             signal = "neutral"
+            score = 50
             description = "Prix entre MA50 et MA200"
         else:
             signal = "bearish"
+            score = max(5, 35 + pct_from_ma200 * 0.5)
             description = "Prix en-dessous de MA50 et MA200"
-
-        pct_from_ma200 = ((price - ma200) / ma200) * 100
 
         return TechnicalSignal(
             name="price_vs_ma",
             value=pct_from_ma200,
             signal=signal,
             weight=self.weights["price_vs_ma"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_rsi(self, rsi: float) -> TechnicalSignal:
-        """Analyse le RSI."""
-        if rsi >= 70:
+        """Analyse le RSI avec scoring gradue continu."""
+        # Score gradue: RSI 20->95, 30->90, 50->55, 65->40, 70->25, 80->10
+        score = float(np.interp(rsi, [15, 25, 30, 50, 65, 70, 80, 90], [98, 92, 85, 55, 40, 25, 10, 2]))
+
+        if rsi >= 80:
+            signal = "bearish"
+            description = f"RSI en forte zone de surachat ({rsi:.1f})"
+        elif rsi >= 70:
             signal = "bearish"
             description = f"RSI en zone de surachat ({rsi:.1f})"
+        elif rsi <= 25:
+            signal = "bullish"
+            description = f"RSI en forte zone de survente ({rsi:.1f})"
         elif rsi <= 30:
             signal = "bullish"
             description = f"RSI en zone de survente ({rsi:.1f})"
-        elif rsi >= 50:
-            signal = "bullish"
-            description = f"RSI positif ({rsi:.1f})"
+        elif rsi >= 55:
+            signal = "neutral"
+            description = f"RSI neutre-haut ({rsi:.1f})"
+        elif rsi >= 45:
+            signal = "neutral"
+            description = f"RSI neutre ({rsi:.1f})"
         else:
-            signal = "bearish"
-            description = f"RSI négatif ({rsi:.1f})"
+            signal = "neutral"
+            description = f"RSI neutre-bas ({rsi:.1f})"
 
         return TechnicalSignal(
             name="rsi",
             value=rsi,
             signal=signal,
             weight=self.weights["rsi"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_macd(self, macd: float, signal: float, histogram: float) -> TechnicalSignal:
-        """Analyse le MACD."""
+        """Analyse le MACD avec scoring gradue."""
         if histogram > 0 and macd > signal:
             sig = "bullish"
+            # Plus l'histogramme est grand, plus le signal est fort
+            score = min(85, 65 + abs(histogram) * 100)
             description = "MACD au-dessus de la ligne de signal"
         elif histogram < 0 and macd < signal:
             sig = "bearish"
+            score = max(15, 35 - abs(histogram) * 100)
             description = "MACD en-dessous de la ligne de signal"
         else:
             sig = "neutral"
+            score = 50
             description = "MACD en transition"
 
         return TechnicalSignal(
@@ -333,18 +373,22 @@ class TechnicalAnalyzer:
             value=histogram,
             signal=sig,
             weight=self.weights["macd"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_volume(self, volume: pd.Series) -> TechnicalSignal:
-        """Analyse le volume."""
+        """Analyse le volume avec scoring gradue."""
         avg_volume = volume.rolling(window=20).mean().iloc[-1]
         current_volume = volume.iloc[-1]
         ratio = current_volume / avg_volume if avg_volume > 0 else 1
 
+        # Score gradue selon le ratio de volume
+        score = float(np.interp(ratio, [0.3, 0.5, 0.8, 1.2, 1.5, 2.5], [25, 35, 45, 55, 65, 80]))
+
         if ratio > 1.5:
             signal = "bullish"
-            description = f"Volume élevé ({ratio:.1f}x moyenne)"
+            description = f"Volume eleve ({ratio:.1f}x moyenne)"
         elif ratio < 0.5:
             signal = "bearish"
             description = f"Volume faible ({ratio:.1f}x moyenne)"
@@ -357,7 +401,8 @@ class TechnicalAnalyzer:
             value=ratio,
             signal=signal,
             weight=self.weights["volume"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_bollinger(
@@ -367,29 +412,38 @@ class TechnicalAnalyzer:
         middle: float,
         lower: float
     ) -> TechnicalSignal:
-        """Analyse les bandes de Bollinger."""
-        if price >= upper:
-            signal = "bearish"
-            description = "Prix au-dessus de la bande supérieure (surachat)"
-        elif price <= lower:
-            signal = "bullish"
-            description = "Prix en-dessous de la bande inférieure (survente)"
-        elif price > middle:
-            signal = "bullish"
-            description = "Prix au-dessus de la moyenne"
-        else:
-            signal = "bearish"
-            description = "Prix en-dessous de la moyenne"
-
+        """Analyse les bandes de Bollinger avec scoring gradue."""
         # Position relative dans les bandes (0 = lower, 1 = upper)
         band_position = (price - lower) / (upper - lower) if upper != lower else 0.5
+
+        # Score gradue selon la position dans les bandes
+        # Proche de lower = bullish (score eleve), proche de upper = bearish (score bas)
+        score = float(np.interp(band_position, [0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1],
+                                               [90, 80, 65, 50, 35, 20, 10, 5]))
+
+        if price >= upper:
+            signal = "bearish"
+            description = "Prix au-dessus de la bande superieure (surachat)"
+        elif price <= lower:
+            signal = "bullish"
+            description = "Prix en-dessous de la bande inferieure (survente)"
+        elif band_position > 0.7:
+            signal = "bearish"
+            description = "Prix dans la partie haute des bandes"
+        elif band_position < 0.3:
+            signal = "bullish"
+            description = "Prix dans la partie basse des bandes"
+        else:
+            signal = "neutral"
+            description = "Prix au milieu des bandes"
 
         return TechnicalSignal(
             name="bollinger",
             value=band_position,
             signal=signal,
             weight=self.weights["bollinger"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_support_resistance(
@@ -398,16 +452,25 @@ class TechnicalAnalyzer:
         support: float,
         resistance: float
     ) -> TechnicalSignal:
-        """Analyse par rapport aux supports/résistances."""
+        """Analyse par rapport aux supports/resistances avec scoring gradue."""
         range_size = resistance - support
         position = (price - support) / range_size if range_size > 0 else 0.5
 
+        # Score gradue: proche du support = bullish (score eleve)
+        score = float(np.interp(position, [0.0, 0.2, 0.5, 0.8, 1.0], [85, 70, 50, 30, 15]))
+
         if position >= 0.8:
             signal = "bearish"
-            description = "Prix proche de la résistance"
+            description = "Prix proche de la resistance"
         elif position <= 0.2:
             signal = "bullish"
             description = "Prix proche du support"
+        elif position > 0.6:
+            signal = "bearish"
+            description = "Prix dans la moitie haute du range"
+        elif position < 0.4:
+            signal = "bullish"
+            description = "Prix dans la moitie basse du range"
         else:
             signal = "neutral"
             description = "Prix au milieu du range"
@@ -417,47 +480,60 @@ class TechnicalAnalyzer:
             value=position,
             signal=signal,
             weight=self.weights["support_resistance"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _analyze_atr(self, atr: float, price: float) -> TechnicalSignal:
-        """Analyse l'ATR (volatilité)."""
+        """Analyse l'ATR (volatilite)."""
         atr_percent = (atr / price) * 100
 
-        if atr_percent > 3:
+        # Volatilite elevee = leger malus, faible = neutre, normale = neutre
+        if atr_percent > 4:
+            signal = "bearish"
+            score = 35
+            description = f"Volatilite tres elevee ({atr_percent:.1f}%)"
+        elif atr_percent > 3:
             signal = "neutral"
-            description = f"Volatilité élevée ({atr_percent:.1f}%)"
+            score = 42
+            description = f"Volatilite elevee ({atr_percent:.1f}%)"
         elif atr_percent < 1:
             signal = "neutral"
-            description = f"Volatilité faible ({atr_percent:.1f}%)"
+            score = 50
+            description = f"Volatilite faible ({atr_percent:.1f}%)"
         else:
             signal = "neutral"
-            description = f"Volatilité normale ({atr_percent:.1f}%)"
+            score = 50
+            description = f"Volatilite normale ({atr_percent:.1f}%)"
 
         return TechnicalSignal(
             name="atr",
             value=atr_percent,
             signal=signal,
             weight=self.weights["atr"],
-            description=description
+            description=description,
+            score=score
         )
 
     def _calculate_score(self, signals: list[TechnicalSignal]) -> float:
-        """Calcule le score global (0-100)."""
+        """Calcule le score global (0-100) en utilisant les scores gradues."""
         total_weight = sum(s.weight for s in signals)
         weighted_score = 0
 
         for signal in signals:
-            if signal.signal == "bullish":
-                score = 100
+            # Utiliser le score gradue si disponible, sinon fallback binaire
+            if signal.score is not None:
+                s_score = signal.score
+            elif signal.signal == "bullish":
+                s_score = 75
             elif signal.signal == "bearish":
-                score = 0
+                s_score = 25
             else:
-                score = 50
+                s_score = 50
 
-            weighted_score += score * (signal.weight / total_weight)
+            weighted_score += s_score * (signal.weight / total_weight)
 
-        return round(weighted_score, 2)
+        return round(max(0, min(100, weighted_score)), 2)
 
     def _determine_trend(self, price: float, ma50: float, ma200: float) -> str:
         """Détermine la tendance générale."""
