@@ -1,0 +1,15 @@
+[Unit]
+Description=Stock Advisor API (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/stock-advisor/python
+Environment=PATH=/opt/stock-advisor/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/stock-advisor/venv/bin/uvicorn src.api.main:app --host 127.0.0.1 --port 8100 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
